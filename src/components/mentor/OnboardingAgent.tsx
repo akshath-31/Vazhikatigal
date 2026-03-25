@@ -51,76 +51,74 @@ export function OnboardingAgent({ onComplete }: { onComplete: () => void }) {
     setLoading(true);
 
     try {
+      // 1. Determine what we asked last
+      const missingBefore = [];
+      const current = cumulativeProfileRef.current;
+      if (!current.skills || current.skills.length === 0) missingBefore.push('skills');
+      else if (!current.languages || current.languages.length === 0) missingBefore.push('languages');
+      else if (!current.location) missingBefore.push('location');
+      else if (!current.career_domain) missingBefore.push('career_domain');
+      else if (!current.max_mentees) missingBefore.push('max_mentees');
+
+      const askedField = missingBefore[0];
+
+      // 2. Fetch AI Response
       const response = await getLyzrResponse(LYZR_AGENT_ID, sessionId, userMsg, userEmail);
 
-      // Try to find JSON in the response
+      // 3. Try JSON extraction
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       let cleanText = response.replace(/\{[\s\S]*\}/, '').trim();
-      let dataFromJSON: any = null;
       
       if (jsonMatch) {
         try {
-          dataFromJSON = JSON.parse(jsonMatch[0]);
-          
-          // Normalize keys (Lyzr might return capitalized or varied keys)
-          const normalizedData: any = {};
+          const dataFromJSON = JSON.parse(jsonMatch[0]);
           Object.keys(dataFromJSON).forEach(k => {
             const key = k.toLowerCase().trim();
-            normalizedData[key] = dataFromJSON[k];
-          });
-
-          // Update the ref (cumulative state)
-          const current = cumulativeProfileRef.current;
-          
-          Object.keys(normalizedData).forEach(key => {
-            const val = normalizedData[key];
-            const isInvalid = val === null || val === undefined || val === '' || val === 'string' || (Array.isArray(val) && val.length === 0);
-            
-            if (!isInvalid) {
+            const val = dataFromJSON[k];
+            if (val && val !== 'string') {
               current[key] = val;
             }
           });
+        } catch (e) { console.error("JSON Error", e); }
+      }
 
-          // Sync ref to state for rendering
-          setProfileData({ ...current });
-
-          // Validation against the CUMULATIVE ref
-          const missingFields = [];
-          if (!current.skills || current.skills.length === 0 || (Array.isArray(current.skills) && current.skills.every((s: any) => s === 'string'))) missingFields.push('skills');
-          if (!current.languages || current.languages.length === 0 || (Array.isArray(current.languages) && current.languages.every((s: any) => s === 'string'))) missingFields.push('languages');
-          if (!current.location || current.location === 'string') missingFields.push('location');
-          if (!current.career_domain || current.career_domain === 'string') missingFields.push('career_domain');
-          if (!current.max_mentees || isNaN(parseInt(current.max_mentees)) || parseInt(current.max_mentees) === 0) missingFields.push('max_mentees');
-
-          // If Lyzr didn't give a natural prompt, use our fallback
-          if (!cleanText) {
-            const nextQuestionMap: any = {
-              'skills': "What specific skills can you mentor students in?",
-              'languages': "Thank you. What languages are you comfortable using for mentoring?",
-              'location': "Great. Where are you currently located (City and State)?",
-              'career_domain': "What is your primary career domain or profession?",
-              'max_mentees': "Finally, how many students would you like to mentor at most?"
-            };
-            
-            if (missingFields.length > 0) {
-              cleanText = nextQuestionMap[missingFields[0]];
-            } else {
-              cleanText = "Excellent! I've collected all the required information. I'm finalizing your profile now...";
-              setIsFinished(true);
-              // Auto-trigger completion
-              setTimeout(() => confirmOnboarding(current), 1500);
-            }
-          } else if (missingFields.length === 0) {
-            cleanText += " \n\nI've collected everything! Finalizing your profile...";
-            setIsFinished(true);
-            setTimeout(() => confirmOnboarding(current), 1500);
-          }
-        } catch (parseErr) {
-          console.error("JSON Parse Error:", parseErr);
+      // 4. SMART FALLBACK: If the field we ASKED for is still missing, FORCE it from user message
+      if (askedField && (!current[askedField] || (Array.isArray(current[askedField]) && current[askedField].length === 0))) {
+        if (askedField === 'skills' || askedField === 'languages') {
+          current[askedField] = [userMsg];
+        } else {
+          current[askedField] = userMsg;
         }
       }
 
-      setMessages(prev => [...prev, { role: 'model', text: cleanText || "I've noted that. Could you tell me more?" }]);
+      // 5. Build Next Question / Finish
+      const missingAfter = [];
+      if (!current.skills || current.skills.length === 0) missingAfter.push('skills');
+      if (!current.languages || current.languages.length === 0) missingAfter.push('languages');
+      if (!current.location) missingAfter.push('location');
+      if (!current.career_domain) missingAfter.push('career_domain');
+      if (!current.max_mentees) missingAfter.push('max_mentees');
+
+      setProfileData({ ...current });
+
+      if (missingAfter.length === 0) {
+        setMessages(prev => [...prev, { role: 'model', text: "Excellent! I've caught all the details. Finalizing your profile now..." }]);
+        setIsFinished(true);
+        setTimeout(() => confirmOnboarding(current), 1500);
+      } else {
+        const nextField = missingAfter[0];
+        const questionMap: any = {
+          'skills': "What specific skills can you mentor students in?",
+          'languages': "Thank you. What languages can you mentor in? (e.g., Tamil, English)",
+          'location': "Great. Where are you currently located?",
+          'career_domain': "What is your primary career domain or profession?",
+          'max_mentees': "Finally, how many students would you like to mentor at most?"
+        };
+        
+        // Use AI text if it's natural, else fallback to our map
+        const finalPrompt = (cleanText && cleanText.length > 10) ? cleanText : questionMap[nextField];
+        setMessages(prev => [...prev, { role: 'model', text: finalPrompt }]);
+      }
       
     } catch (err) {
       console.error("Lyzr AI Error:", err);
@@ -161,6 +159,22 @@ export function OnboardingAgent({ onComplete }: { onComplete: () => void }) {
             <p className="font-label text-[10px] text-[#7C5E4C] uppercase tracking-[0.2em]">Conversational Assistant</p>
           </div>
         </div>
+        <button 
+          onClick={() => {
+            const demoData = {
+              skills: ['Mentorship', 'Growth'],
+              languages: ['Tamil', 'English'],
+              location: 'Chennai',
+              career_domain: 'Software Engineering',
+              max_mentees: 2
+            };
+            setProfileData(demoData);
+            setIsFinished(true);
+          }}
+          className="text-[#7C5E4C] text-[10px] uppercase font-bold tracking-widest hover:text-[#64655A] transition-all"
+        >
+          Skip to Summary
+        </button>
       </header>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-8 space-y-10 max-w-4xl mx-auto w-full scroll-smooth">
