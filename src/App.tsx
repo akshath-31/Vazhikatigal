@@ -96,7 +96,7 @@ function LandingPage({ onSelectRole }: { onSelectRole: (role: UserRole) => void 
       <div className="max-w-2xl w-full text-center space-y-16">
         <div className="space-y-6">
           <span className="font-label text-xs text-[#7C5E4C] tracking-[0.2em] uppercase">Agaram Foundation</span>
-          <h1 className="text-7xl md:text-8xl font-headline font-bold italic text-[#64655A] tracking-tighter">Vazhikatigal</h1>
+          <h1 className="text-7xl md:text-8xl font-headline font-bold italic text-[#64655A] tracking-tighter pt-[10px]">வழிKaatigal</h1>
           <p className="text-[#66645E] text-xl font-headline italic max-w-lg mx-auto">
             "The Digital Journal of Mentorship. Shaping futures, one interaction at a time."
           </p>
@@ -105,7 +105,7 @@ function LandingPage({ onSelectRole }: { onSelectRole: (role: UserRole) => void 
         <div className="grid md:grid-cols-2 gap-8 max-w-xl mx-auto">
           <button
             onClick={() => handleRoleSelect('mentee')}
-            className="group p-8 bg-[#FFFFFF] border border-[#EBE8E0] hover:border-[#64655A] rounded-xl transition-all text-left shadow-sm hover:shadow-md"
+            className="group p-8 bg-[#FFFFFF] border border-[#EBE8E0] hover:border-[#64655A] rounded-xl transition-all text-left shadow-sm hover:shadow-md h-full flex flex-col"
           >
             <span className="font-label text-[10px] text-[#7C5E4C] mb-2 block">Portal One</span>
             <div className="text-2xl font-headline font-bold text-[#1C1C1C] group-hover:text-[#64655A] transition-colors">I am a Mentee</div>
@@ -114,7 +114,7 @@ function LandingPage({ onSelectRole }: { onSelectRole: (role: UserRole) => void 
 
           <button
             onClick={() => handleRoleSelect('mentor')}
-            className="group p-8 bg-[#FFFFFF] border border-[#EBE8E0] hover:border-[#64655A] rounded-xl transition-all text-left shadow-sm hover:shadow-md"
+            className="group p-8 bg-[#FFFFFF] border border-[#EBE8E0] hover:border-[#64655A] rounded-xl transition-all text-left shadow-sm hover:shadow-md h-full flex flex-col"
           >
             <span className="font-label text-[10px] text-[#7C5E4C] mb-2 block">Portal Two</span>
             <div className="text-2xl font-headline font-bold text-[#1C1C1C] group-hover:text-[#64655A] transition-colors">I am a Mentor</div>

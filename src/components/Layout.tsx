@@ -42,7 +42,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="max-w-7xl mx-auto px-8 h-20 flex justify-between items-center">
           <div className="flex items-center gap-12">
             <Link to="/" className="font-headline text-2xl font-bold italic text-[#64655A]">
-              Vazhikatigal
+              வழிKaatigal
             </Link>
             
             <div className="hidden md:flex gap-8 items-center">

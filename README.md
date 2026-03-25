@@ -1,20 +1,34 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# வழிKaatigal (Vazhikatigal)
+### Agaram Foundation Mentorship Portal
 
-# Run and deploy your AI Studio app
+வழிKaatigal is a premium, AI-powered mentorship platform designed for the **Agaram Foundation**. It serves as a digital bridge between mentors and mentees, streamlining the process of guidance, tracking, and growth through a sophisticated interface for mentorship interactions.
 
-This contains everything you need to run your app locally.
+---
 
-View your app in AI Studio: https://ai.studio/apps/6a522a26-1d1e-4aa9-8419-f91512cf5f27
+## 🌟 Key Features
 
-## Run Locally
+- **🎯 Intelligent Matching**: Uses Google Gemini AI to analyze mentee needs and mentor profiles to suggest the most impactful pairings.
+- **📚 Digital Journaling**: A structured platform for logging meetings and tracking the progress of every mentorship journey.
+- **🤖 AI Performance Analysis**: Automated analysis of meeting logs to provide insights into mentee progress and identify potential challenges early.
+- **🏛️ Unified Administration**: A comprehensive dashboard for program administrators to manage pairs, verify requests, and monitor program health.
+- **🛡️ Secure Infrastructure**: Built on Supabase for robust data management and high performance.
 
-**Prerequisites:**  Node.js
+---
 
+## 🛠️ Technology Stack
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+- **Frontend**: React + TypeScript + Vite
+- **Styling**: Tailwind CSS (Premium Custom Design System)
+- **Backend**: Supabase (Postgres Database)
+- **AI Engine**: Google Gemini API
+- **Icons**: Lucide React
+
+---
+
+## 🚀 Vision
+
+வழிKaatigal (The Way-Showers) is more than just a tracking tool; it is a digital ecosystem dedicated to the Agaram Foundation’s mission of empowering underprivileged youth through education and mentorship. By digitizing the mentorship experience, we ensure that no student’s potential goes unrecognized and every mentor’s contribution is maximized.
+
+---
+
+*Developed for the Agaram Foundation.*
