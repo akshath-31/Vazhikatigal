@@ -1,0 +1,46 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&family=Public+Sans:wght@100..900&display=swap');
+
+@theme {
+  --font-sans: "Public Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Newsreader", serif;
+  
+  --color-background: #F8F4EF;
+  --color-surface: #FFFBFF;
+  --color-on-background: #1C1C1C;
+  --color-primary: #64655A;
+  --color-secondary: #7C5E4C;
+  --color-tertiary: #71642C;
+  --color-outline: #82807A;
+  --color-surface-container: #F7F3EC;
+  --color-surface-container-low: #FDF9F3;
+  --color-surface-container-lowest: #FFFFFF;
+  --color-surface-container-high: #F1EDE6;
+  --color-surface-container-highest: #EBE8E0;
+}
+
+:root {
+  --background: #F8F4EF;
+  --foreground: #1C1C1C;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--background);
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-headline {
+  font-family: var(--font-serif);
+}
+
+.font-body {
+  font-family: var(--font-sans);
+}
+
+.font-label {
+  font-family: var(--font-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}

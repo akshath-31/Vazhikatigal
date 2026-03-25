@@ -1,0 +1,124 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Base user profile",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["mentee", "mentor", "admin"] },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "email", "role"]
+    },
+    "MentorProfile": {
+      "title": "Mentor Profile",
+      "description": "Extended profile for mentors",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "skills": { "type": "array", "items": { "type": "string" } },
+        "languages": { "type": "array", "items": { "type": "string" } },
+        "location": { "type": "string" },
+        "career_domain": { "type": "string" },
+        "availability_slots": { "type": "array", "items": { "type": "string" } },
+        "bio": { "type": "string" },
+        "onboarding_complete": { "type": "boolean" },
+        "max_mentees": { "type": "integer" }
+      },
+      "required": ["user_id", "onboarding_complete"]
+    },
+    "MenteeProfile": {
+      "title": "Mentee Profile",
+      "description": "Extended profile for mentees",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "grade": { "type": "string" },
+        "interests": { "type": "array", "items": { "type": "string" } },
+        "language_preference": { "type": "string" },
+        "location": { "type": "string" },
+        "career_goal": { "type": "string" },
+        "assigned_mentor_id": { "type": "string" }
+      },
+      "required": ["user_id"]
+    },
+    "MentorRequest": {
+      "title": "Mentor Request",
+      "description": "Request from mentee for a mentor",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "mentee_id": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "matched", "rejected"] },
+        "requested_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["mentee_id", "status"]
+    },
+    "Meeting": {
+      "title": "Meeting",
+      "description": "Mentorship session log",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "mentor_id": { "type": "string" },
+        "mentee_id": { "type": "string" },
+        "scheduled_at": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["upcoming", "completed"] },
+        "mentor_review_text": { "type": "string" },
+        "meeting_location_name": { "type": "string" },
+        "meeting_lat": { "type": "number" },
+        "meeting_lng": { "type": "number" },
+        "ai_score": { "type": "integer" },
+        "ai_description": { "type": "string" },
+        "ai_tips": { "type": "array", "items": { "type": "string" } },
+        "ai_faults": { "type": "array", "items": { "type": "string" } },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["mentor_id", "mentee_id", "scheduled_at", "status"]
+    },
+    "MatchLog": {
+      "title": "Match Log",
+      "description": "Record of mentor-mentee matching",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "mentee_id": { "type": "string" },
+        "matched_mentor_id": { "type": "string" },
+        "match_reason": { "type": "string" },
+        "matched_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["mentee_id", "matched_mentor_id"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/mentor_profiles/{profileId}": {
+      "schema": "MentorProfile",
+      "description": "Mentor profiles"
+    },
+    "/mentee_profiles/{profileId}": {
+      "schema": "MenteeProfile",
+      "description": "Mentee profiles"
+    },
+    "/mentor_requests/{requestId}": {
+      "schema": "MentorRequest",
+      "description": "Mentor requests"
+    },
+    "/meetings/{meetingId}": {
+      "schema": "Meeting",
+      "description": "Meeting logs"
+    },
+    "/match_logs/{logId}": {
+      "schema": "MatchLog",
+      "description": "Match logs"
+    }
+  }
+}
