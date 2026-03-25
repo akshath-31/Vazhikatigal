@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../supabase';
 import { MentorProfile, MenteeProfile, MentorRequest } from '../../types';
-import { getMatchingAgent } from '../../lib/gemini';
+import { getMatchingAgent } from '../../lib/lyzr';
 import { User, ArrowRight, Sparkles } from 'lucide-react';
 
 export function AdminRequests() {
@@ -42,25 +42,19 @@ export function AdminRequests() {
     try {
       const match = await getMatchingAgent(mentee, mentors);
 
-      // Update mentee's assigned_mentor_id
-      await supabase
-        .from('mentee_profiles')
-        .update({ assigned_mentor_id: match.mentor_id })
-        .eq('id', mentee.id!);
-
-      // Update request status
-      await supabase
-        .from('mentor_requests')
-        .update({ status: 'matched' })
-        .eq('id', request.id!);
-
-      // Create match log
+      // 1. Create match log (Proposal for mentor to accept)
       await supabase.from('match_logs').insert({
         mentee_id: request.mentee_id,
         matched_mentor_id: match.mentor_id,
         match_reason: match.match_reason,
         matched_at: new Date().toISOString(),
       });
+
+      // 2. Update request status
+      await supabase
+        .from('mentor_requests')
+        .update({ status: 'matched' })
+        .eq('id', request.id!);
 
       await fetchAll();
     } catch (err) {

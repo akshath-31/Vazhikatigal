@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../supabase';
 import { useAuth } from '../../App';
-import { getOnboardingAgentResponse } from '../../lib/gemini';
+import { getLyzrResponse } from '../../lib/lyzr';
+const LYZR_AGENT_ID = import.meta.env.VITE_LYZR_ONBOARDING_AGENT_ID || '';
 import { Send, UserCircle, Bot, CheckCircle2, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -18,7 +19,21 @@ export function OnboardingAgent({ onComplete }: { onComplete: () => void }) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
-  const [profileData, setProfileData] = useState<any>(null);
+  const [profileData, setProfileData] = useState<any>({
+    skills: [],
+    languages: [],
+    location: '',
+    career_domain: '',
+    max_mentees: 0
+  });
+  const cumulativeProfileRef = useRef<any>({
+    skills: [],
+    languages: [],
+    location: '',
+    career_domain: '',
+    max_mentees: 0
+  });
+  const [sessionId] = useState(() => `session-${Math.random().toString(36).substr(2, 9)}`);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -30,50 +45,107 @@ export function OnboardingAgent({ onComplete }: { onComplete: () => void }) {
   const handleSend = async () => {
     if (!input.trim() || loading) return;
     const userMsg = input.trim();
+    const userEmail = user?.email || 'akshath.creates@gmail.com';
     setInput('');
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setLoading(true);
 
     try {
-      const history = messages.map(m => ({
-        role: m.role === 'model' ? 'model' : 'user',
-        parts: [{ text: m.text }]
-      }));
-      history.push({ role: 'user', parts: [{ text: userMsg }] });
+      const response = await getLyzrResponse(LYZR_AGENT_ID, sessionId, userMsg, userEmail);
 
-      const response = await getOnboardingAgentResponse(history);
+      // Try to find JSON in the response
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      let cleanText = response.replace(/\{[\s\S]*\}/, '').trim();
+      let dataFromJSON: any = null;
+      
+      if (jsonMatch) {
+        try {
+          dataFromJSON = JSON.parse(jsonMatch[0]);
+          
+          // Normalize keys (Lyzr might return capitalized or varied keys)
+          const normalizedData: any = {};
+          Object.keys(dataFromJSON).forEach(k => {
+            const key = k.toLowerCase().trim();
+            normalizedData[key] = dataFromJSON[k];
+          });
 
-      try {
-        const data = JSON.parse(response);
-        setProfileData(data);
-        setIsFinished(true);
-        setMessages(prev => [...prev, { role: 'model', text: "Great! I've collected all your information. Here's a summary of your profile. Does everything look correct?" }]);
-      } catch {
-        setMessages(prev => [...prev, { role: 'model', text: response }]);
+          // Update the ref (cumulative state)
+          const current = cumulativeProfileRef.current;
+          
+          Object.keys(normalizedData).forEach(key => {
+            const val = normalizedData[key];
+            const isInvalid = val === null || val === undefined || val === '' || val === 'string' || (Array.isArray(val) && val.length === 0);
+            
+            if (!isInvalid) {
+              current[key] = val;
+            }
+          });
+
+          // Sync ref to state for rendering
+          setProfileData({ ...current });
+
+          // Validation against the CUMULATIVE ref
+          const missingFields = [];
+          if (!current.skills || current.skills.length === 0 || (Array.isArray(current.skills) && current.skills.every((s: any) => s === 'string'))) missingFields.push('skills');
+          if (!current.languages || current.languages.length === 0 || (Array.isArray(current.languages) && current.languages.every((s: any) => s === 'string'))) missingFields.push('languages');
+          if (!current.location || current.location === 'string') missingFields.push('location');
+          if (!current.career_domain || current.career_domain === 'string') missingFields.push('career_domain');
+          if (!current.max_mentees || isNaN(parseInt(current.max_mentees)) || parseInt(current.max_mentees) === 0) missingFields.push('max_mentees');
+
+          // If Lyzr didn't give a natural prompt, use our fallback
+          if (!cleanText) {
+            const nextQuestionMap: any = {
+              'skills': "What specific skills can you mentor students in?",
+              'languages': "Thank you. What languages are you comfortable using for mentoring?",
+              'location': "Great. Where are you currently located (City and State)?",
+              'career_domain': "What is your primary career domain or profession?",
+              'max_mentees': "Finally, how many students would you like to mentor at most?"
+            };
+            
+            if (missingFields.length > 0) {
+              cleanText = nextQuestionMap[missingFields[0]];
+            } else {
+              cleanText = "Excellent! I've collected all the required information. I'm finalizing your profile now...";
+              setIsFinished(true);
+              // Auto-trigger completion
+              setTimeout(() => confirmOnboarding(current), 1500);
+            }
+          } else if (missingFields.length === 0) {
+            cleanText += " \n\nI've collected everything! Finalizing your profile...";
+            setIsFinished(true);
+            setTimeout(() => confirmOnboarding(current), 1500);
+          }
+        } catch (parseErr) {
+          console.error("JSON Parse Error:", parseErr);
+        }
       }
+
+      setMessages(prev => [...prev, { role: 'model', text: cleanText || "I've noted that. Could you tell me more?" }]);
+      
     } catch (err) {
-      console.error(err);
-      setMessages(prev => [...prev, { role: 'model', text: "I'm sorry, I encountered an error. Could you please try again?" }]);
+      console.error("Lyzr AI Error:", err);
+      setMessages(prev => [...prev, { role: 'model', text: "I'm sorry, I'm having trouble connecting to the onboarding system. Please try again." }]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
-  const confirmOnboarding = async () => {
-    if (!user || !profileData) return;
+  const confirmOnboarding = async (finalData: any = profileData) => {
+    if (!user || !finalData) return;
     setLoading(true);
     const { error } = await supabase.from('mentor_profiles').insert({
       user_id: user.id,
-      skills: profileData.skills,
-      languages: profileData.languages,
-      location: profileData.location,
-      career_domain: profileData.career_domain,
-      max_mentees: profileData.max_mentees,
-      bio: `Experienced mentor in ${profileData.career_domain} based in ${profileData.location}.`,
+      skills: Array.isArray(finalData.skills) ? finalData.skills : [finalData.skills],
+      languages: Array.isArray(finalData.languages) ? finalData.languages : [finalData.languages],
+      location: finalData.location,
+      career_domain: finalData.career_domain,
+      max_mentees: parseInt(finalData.max_mentees) || 1,
+      bio: `Experienced mentor in ${finalData.career_domain} based in ${finalData.location}.`,
       onboarding_complete: true,
       availability_slots: []
     });
     if (!error) onComplete();
-    else console.error(error);
+    else console.error("Supabase error:", error);
     setLoading(false);
   };
 

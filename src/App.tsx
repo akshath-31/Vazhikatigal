@@ -36,21 +36,76 @@ export const useAuth = () => {
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(false); // No loading since we mock it
+  const [loading, setLoading] = useState(true);
 
-  // Function to simulate login with a specific role for testing
+  const fetchUserData = async (authUser: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', authUser.id)
+        .single();
+      
+      if (data) {
+        setUser(data as User);
+      } else {
+        // Fallback for user record not found yet
+        setUser({
+          id: authUser.id,
+          email: authUser.email!,
+          name: authUser.email!.split('@')[0],
+          role: authUser.user_metadata?.role || 'mentee',
+          created_at: authUser.created_at
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching user data:', err);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    // Check active sessions and sets the user
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        fetchUserData(session.user);
+      } else {
+        setLoading(false);
+      }
+    });
+
+    // Listen for changes on auth state
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        fetchUserData(session.user);
+      } else {
+        setUser(null);
+        setLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const logout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+  };
+
+  // Mock login for quick testing/bypass
   const mockLogin = (role: UserRole) => {
+    const ids = {
+      mentee: '550e8400-e29b-41d4-a716-446655440000',
+      mentor: '550e8400-e29b-41d4-a716-446655440001',
+      admin: '550e8400-e29b-41d4-a716-446655440002'
+    };
     setUser({
-      id: 'mock-id',
+      id: ids[role],
       name: 'Test ' + role.charAt(0).toUpperCase() + role.slice(1),
-      email: 'test@example.com',
+      email: `test-${role}@example.com`,
       role: role,
       created_at: new Date().toISOString()
     });
-  };
-
-  const logout = async () => {
-    setUser(null);
   };
 
   return (
@@ -58,23 +113,22 @@ export default function App() {
       <Router>
         <Routes>
           <Route path="/" element={<LandingPage onSelectRole={mockLogin} />} />
+          <Route path="/auth/:role" element={<AuthPage />} />
           
-          {/* Mentee Portal */}
-          <Route path="/mentee/*" element={<Layout><MenteeDashboard /></Layout>} />
-          <Route path="/mentee/request" element={<Layout><MenteeRequest /></Layout>} />
-          <Route path="/mentee/logs" element={<Layout><MenteeLogs /></Layout>} />
+          {/* Protected Routes */}
+          <Route path="/mentee/*" element={user?.role === 'mentee' ? <Layout><MenteeDashboard /></Layout> : <Navigate to="/" />} />
+          <Route path="/mentee/request" element={user?.role === 'mentee' ? <Layout><MenteeRequest /></Layout> : <Navigate to="/" />} />
+          <Route path="/mentee/logs" element={user?.role === 'mentee' ? <Layout><MenteeLogs /></Layout> : <Navigate to="/" />} />
 
-          {/* Mentor Portal */}
-          <Route path="/mentor/*" element={<Layout><MentorDashboard /></Layout>} />
-          <Route path="/mentor/mentees" element={<Layout><MentorMentees /></Layout>} />
-          <Route path="/mentor/log-meeting" element={<Layout><LogMeeting /></Layout>} />
-          <Route path="/mentor/logs" element={<Layout><MentorLogs /></Layout>} />
+          <Route path="/mentor/*" element={user?.role === 'mentor' ? <Layout><MentorDashboard /></Layout> : <Navigate to="/" />} />
+          <Route path="/mentor/mentees" element={user?.role === 'mentor' ? <Layout><MentorMentees /></Layout> : <Navigate to="/" />} />
+          <Route path="/mentor/log-meeting" element={user?.role === 'mentor' ? <Layout><LogMeeting /></Layout> : <Navigate to="/" />} />
+          <Route path="/mentor/logs" element={user?.role === 'mentor' ? <Layout><MentorLogs /></Layout> : <Navigate to="/" />} />
 
-          {/* Admin Portal */}
-          <Route path="/admin/*" element={<Layout><AdminDashboard /></Layout>} />
-          <Route path="/admin/pairs" element={<Layout><AdminPairs /></Layout>} />
-          <Route path="/admin/meetings" element={<Layout><AdminMeetings /></Layout>} />
-          <Route path="/admin/requests" element={<Layout><AdminRequests /></Layout>} />
+          <Route path="/admin/*" element={user?.role === 'admin' ? <Layout><AdminDashboard /></Layout> : <Navigate to="/" />} />
+          <Route path="/admin/pairs" element={user?.role === 'admin' ? <Layout><AdminPairs /></Layout> : <Navigate to="/" />} />
+          <Route path="/admin/meetings" element={user?.role === 'admin' ? <Layout><AdminMeetings /></Layout> : <Navigate to="/" />} />
+          <Route path="/admin/requests" element={user?.role === 'admin' ? <Layout><AdminRequests /></Layout> : <Navigate to="/" />} />
 
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
@@ -86,14 +140,18 @@ export default function App() {
 function LandingPage({ onSelectRole }: { onSelectRole: (role: UserRole) => void }) {
   const navigate = useNavigate();
 
-  const handleRoleSelect = (role: UserRole) => {
-    onSelectRole(role);
-    navigate(`/${role}`);
+  const handleRoleSelect = (role: UserRole, isMock: boolean = false) => {
+    if (isMock) {
+      onSelectRole(role);
+      navigate(`/${role}`);
+    } else {
+      navigate(`/auth/${role}`);
+    }
   };
 
   return (
     <div className="min-h-screen bg-[#F8F4EF] flex flex-col items-center justify-center p-8">
-      <div className="max-w-2xl w-full text-center space-y-16">
+      <div className="max-w-4xl w-full text-center space-y-16">
         <div className="space-y-6">
           <span className="font-label text-xs text-[#7C5E4C] tracking-[0.2em] uppercase">Agaram Foundation</span>
           <h1 className="text-7xl md:text-8xl font-headline font-bold italic text-[#64655A] tracking-tighter pt-[10px]">வழிKaatigal</h1>
@@ -102,32 +160,46 @@ function LandingPage({ onSelectRole }: { onSelectRole: (role: UserRole) => void 
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 max-w-xl mx-auto">
-          <button
-            onClick={() => handleRoleSelect('mentee')}
-            className="group p-8 bg-[#FFFFFF] border border-[#EBE8E0] hover:border-[#64655A] rounded-xl transition-all text-left shadow-sm hover:shadow-md h-full flex flex-col"
-          >
-            <span className="font-label text-[10px] text-[#7C5E4C] mb-2 block">Portal One</span>
-            <div className="text-2xl font-headline font-bold text-[#1C1C1C] group-hover:text-[#64655A] transition-colors">I am a Mentee</div>
-            <p className="text-sm text-[#66645E] mt-2 italic">I seek guidance and growth.</p>
-          </button>
+        <div className="grid md:grid-cols-3 gap-8">
+          {/* Mentee */}
+          <div className="bg-[#FFFFFF] border border-[#EBE8E0] rounded-xl overflow-hidden shadow-sm flex flex-col">
+            <div className="p-8 flex-1">
+              <span className="font-label text-[10px] text-[#7C5E4C] mb-2 block uppercase tracking-widest text-left">Mentee Portal</span>
+              <h3 className="text-2xl font-headline font-bold text-[#1C1C1C] text-left">Mentee Access</h3>
+              <p className="text-sm text-[#66645E] mt-4 italic text-left leading-relaxed">Seek guidance and define your career path.</p>
+            </div>
+            <div className="p-4 bg-[#F8F4EF] border-t border-[#EBE8E0] space-y-2">
+              <button onClick={() => handleRoleSelect('mentee')} className="w-full py-3 bg-[#64655A] text-white rounded-sm font-label uppercase text-[10px] tracking-widest hover:bg-[#58594E] transition-all">Sign In / Register</button>
+              <button onClick={() => handleRoleSelect('mentee', true)} className="w-full py-2 text-[#7C5E4C] text-[10px] uppercase font-bold tracking-widest hover:bg-white transition-all">Quick Bypass</button>
+            </div>
+          </div>
 
-          <button
-            onClick={() => handleRoleSelect('mentor')}
-            className="group p-8 bg-[#FFFFFF] border border-[#EBE8E0] hover:border-[#64655A] rounded-xl transition-all text-left shadow-sm hover:shadow-md h-full flex flex-col"
-          >
-            <span className="font-label text-[10px] text-[#7C5E4C] mb-2 block">Portal Two</span>
-            <div className="text-2xl font-headline font-bold text-[#1C1C1C] group-hover:text-[#64655A] transition-colors">I am a Mentor</div>
-            <p className="text-sm text-[#66645E] mt-2 italic">I wish to guide the next generation.</p>
-          </button>
+          {/* Mentor */}
+          <div className="bg-[#FFFFFF] border border-[#EBE8E0] rounded-xl overflow-hidden shadow-sm flex flex-col">
+            <div className="p-8 flex-1">
+              <span className="font-label text-[10px] text-[#7C5E4C] mb-2 block uppercase tracking-widest text-left">Mentor Portal</span>
+              <h3 className="text-2xl font-headline font-bold text-[#1C1C1C] text-left">Mentor Space</h3>
+              <p className="text-sm text-[#66645E] mt-4 italic text-left leading-relaxed">Inspire and guide the next generation of students.</p>
+            </div>
+            <div className="p-4 bg-[#F8F4EF] border-t border-[#EBE8E0] space-y-2">
+              <button onClick={() => handleRoleSelect('mentor')} className="w-full py-3 bg-[#64655A] text-white rounded-sm font-label uppercase text-[10px] tracking-widest hover:bg-[#58594E] transition-all">Sign In / Register</button>
+              <button onClick={() => handleRoleSelect('mentor', true)} className="w-full py-2 text-[#7C5E4C] text-[10px] uppercase font-bold tracking-widest hover:bg-white transition-all">Quick Bypass</button>
+            </div>
+          </div>
+
+          {/* Admin */}
+          <div className="bg-[#FFFFFF] border border-[#EBE8E0] rounded-xl overflow-hidden shadow-sm flex flex-col border-b-4 border-b-[#1C1C1C]">
+            <div className="p-8 flex-1">
+              <span className="font-label text-[10px] text-[#7C5E4C] mb-2 block uppercase tracking-widest text-left">Admin Portal</span>
+              <h3 className="text-2xl font-headline font-bold text-[#1C1C1C] text-left">Central Control</h3>
+              <p className="text-sm text-[#66645E] mt-4 italic text-left leading-relaxed">Oversee program metrics and orchestration.</p>
+            </div>
+            <div className="p-4 bg-[#F8F4EF] border-t border-[#EBE8E0] space-y-2">
+              <button onClick={() => handleRoleSelect('admin')} className="w-full py-3 bg-[#1C1C1C] text-white rounded-sm font-label uppercase text-[10px] tracking-widest hover:bg-black transition-all">Admin Login</button>
+              <button onClick={() => handleRoleSelect('admin', true)} className="w-full py-2 text-[#7C5E4C] text-[10px] uppercase font-bold tracking-widest hover:bg-white transition-all">Central Control Bypass</button>
+            </div>
+          </div>
         </div>
-
-        <button
-          onClick={() => handleRoleSelect('admin')}
-          className="text-[#7C5E4C] hover:text-[#64655A] text-sm font-label transition-colors border-b border-transparent hover:border-[#64655A]"
-        >
-          Administrator Access
-        </button>
       </div>
     </div>
   );

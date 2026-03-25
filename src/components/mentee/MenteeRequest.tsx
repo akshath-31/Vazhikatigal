@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabase';
 import { useAuth } from '../../App';
 import { MenteeProfile, MentorRequest as RequestType } from '../../types';
+import { MatchingAgent } from './MatchingAgent';
 import { Send, CheckCircle2, Clock, User, MapPin, GraduationCap, Target, Globe } from 'lucide-react';
 
 export function MenteeRequest() {
@@ -9,6 +10,8 @@ export function MenteeRequest() {
   const [profile, setProfile] = useState<MenteeProfile | null>(null);
   const [request, setRequest] = useState<RequestType | null>(null);
   const [loading, setLoading] = useState(false);
+  const [matchResult, setMatchResult] = useState<{ mentor_name: string; match_score: number; reason: string } | null>(null);
+  const [showMatchingAgent, setShowMatchingAgent] = useState(false);
 
   const [formData, setFormData] = useState({
     grade: '',
@@ -56,15 +59,7 @@ export function MenteeRequest() {
   };
 
   const handleRequestMentor = async () => {
-    if (!user) return;
-    setLoading(true);
-    const { error } = await supabase.from('mentor_requests').insert({
-      mentee_id: user.id,
-      status: 'pending',
-      requested_at: new Date().toISOString(),
-    });
-    if (!error) await fetchData();
-    setLoading(false);
+    setShowMatchingAgent(true);
   };
 
   if (!profile) {
@@ -168,7 +163,22 @@ export function MenteeRequest() {
                 </div>
                 <div className="space-y-4">
                   <h3 className="font-headline text-3xl text-[#1C1C1C]">Matched <span className="italic text-[#64655A]">Successfully</span>!</h3>
-                  <p className="font-body text-[#64645E] max-w-md mx-auto">You have been assigned a mentor. Your journey of growth begins now.</p>
+                  {matchResult ? (
+                    <div className="bg-[#F8F4EF] p-8 rounded-xl border border-[#EBE8E0] space-y-4 max-w-lg mx-auto text-left">
+                      <div className="flex justify-between items-center">
+                        <span className="font-label text-xs uppercase tracking-widest text-[#7C5E4C]">AI Match Result</span>
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${matchResult.match_score >= 70 ? 'bg-emerald-100 text-emerald-700' : matchResult.match_score >= 50 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
+                          {matchResult.match_score}% Match
+                        </span>
+                      </div>
+                      <div>
+                        <h4 className="font-headline text-xl text-[#1C1C1C]">{matchResult.mentor_name}</h4>
+                        <p className="font-body text-[#64645E] mt-2 leading-relaxed">{matchResult.reason}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="font-body text-[#64645E] max-w-md mx-auto">You have been assigned a mentor. Your journey of growth begins now.</p>
+                  )}
                 </div>
                 <a href="/mentee" className="inline-block px-12 py-4 bg-[#1C1C1C] text-[#F8F4EF] font-headline text-lg rounded-lg hover:bg-[#64655A] transition-all shadow-lg">
                   Go to Dashboard
@@ -178,6 +188,12 @@ export function MenteeRequest() {
           </div>
         )}
       </div>
+      {showMatchingAgent && profile && (
+        <MatchingAgent profile={profile} onComplete={() => {
+          setShowMatchingAgent(false);
+          fetchData();
+        }} />
+      )}
     </div>
   );
 }

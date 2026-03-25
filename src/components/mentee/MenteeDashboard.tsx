@@ -10,11 +10,24 @@ export function MenteeDashboard() {
   const [profile, setProfile] = useState<MenteeProfile | null>(null);
   const [mentor, setMentor] = useState<MentorProfile | null>(null);
   const [mentorUser, setMentorUser] = useState<any>(null);
+  const [matchReason, setMatchReason] = useState<string>('');
 
   useEffect(() => {
     if (!user) return;
     fetchProfile();
+    fetchMatchReason();
   }, [user]);
+
+  const fetchMatchReason = async () => {
+    const { data } = await supabase
+      .from('match_logs')
+      .select('match_reason')
+      .eq('mentee_id', user!.id)
+      .order('matched_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (data) setMatchReason(data.match_reason);
+  };
 
   const fetchProfile = async () => {
     const { data } = await supabase
@@ -86,6 +99,12 @@ export function MenteeDashboard() {
                       <span key={skill} className="px-3 py-1 bg-[#F7F3EC] text-[#64655A] text-xs font-medium rounded-full border border-[#EBE8E0]">{skill}</span>
                     ))}
                   </div>
+                  {matchReason && (
+                    <div className="mt-8 p-4 bg-[#F1EDE6]/50 rounded-lg border border-[#EBE8E0]">
+                      <p className="text-[10px] text-[#7C5E4C] font-label uppercase tracking-widest mb-1">Matching Insight</p>
+                      <p className="text-sm text-[#64645E] italic leading-relaxed">{matchReason}</p>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (

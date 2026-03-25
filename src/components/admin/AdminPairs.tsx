@@ -40,9 +40,9 @@ export function AdminPairs() {
       : 0;
     let healthColor = 'text-[#7C5E4C] bg-[#F7F3EC]';
     if (pairMeetings.length > 0) {
-      if (avgScore >= 70) healthColor = 'text-[#64655A] bg-[#F1EDE6]';
-      else if (avgScore >= 50) healthColor = 'text-[#7C5E4C] bg-[#F7F3EC]';
-      else healthColor = 'text-[#8B4513] bg-[#FDF5E6]';
+      if (avgScore >= 70) healthColor = 'text-emerald-700 bg-emerald-50 border-emerald-100';
+      else if (avgScore >= 50) healthColor = 'text-amber-700 bg-amber-50 border-amber-100';
+      else healthColor = 'text-rose-700 bg-rose-50 border-rose-100';
     }
     return { count: pairMeetings.length, avgScore, healthColor };
   };

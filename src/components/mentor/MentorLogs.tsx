@@ -27,9 +27,9 @@ export function MentorLogs() {
   }, [profile]);
 
   const getScoreColor = (score: number) => {
-    if (score >= 70) return 'text-[#64655A] border-[#64655A] bg-[#64655A]/5';
-    if (score >= 50) return 'text-[#7C5E4C] border-[#7C5E4C] bg-[#7C5E4C]/5';
-    return 'text-[#82807A] border-[#82807A] bg-[#82807A]/5';
+    if (score >= 70) return 'text-emerald-600 border-emerald-600 bg-emerald-50';
+    if (score >= 50) return 'text-amber-600 border-amber-600 bg-amber-50';
+    return 'text-rose-600 border-rose-600 bg-rose-50';
   };
 
   return (
